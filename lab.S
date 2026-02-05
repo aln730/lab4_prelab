@@ -96,6 +96,7 @@ RegInit     PROC  {}
 ;>>>>> begin subroutine code <<<<<
 ;---------------------------------------------------------------
 DIVU        PROC    {}
+
             PUSH    {R2,R3,LR}        ; preserve registers
 
             CMP     R0,#0             ; divisor = 0?
@@ -106,7 +107,7 @@ DIVU        PROC    {}
 
 DivLoop
             CMP     R3,R0
-            BLO     DivDone           ; unsigned compare
+            BLO     DivDone           ; unsigned comparison
 
             SUBS    R3,R3,R0
             ADDS    R2,R2,#1
@@ -116,18 +117,13 @@ DivDone
             MOV     R0,R2             ; quotient
             MOV     R1,R3             ; remainder
 
-            MRS     R2,APSR           ; clear C flag
-            BIC     R2,R2,#APSR_C_MASK
-            MSR     APSR,R2
-
+            ADDS    R2,R2,#0          ; clear C flag (C = 0)
             POP     {R2,R3,PC}
 
 DivByZero
-            MRS     R2,APSR           ; set C flag
-            ORR     R2,R2,#APSR_C_MASK
-            MSR     APSR,R2
-
+            SUBS    R2,R2,#0          ; set C flag (C = 1)
             POP     {R2,R3,PC}
+
             ENDP
 ;---------------------------------------------------------------
 ;>>>>>   end subroutine code <<<<<
