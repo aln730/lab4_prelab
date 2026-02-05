@@ -1,0 +1,159 @@
+            TTL     Unsigned Division Subroutine (DIVU)
+;****************************************************************
+;Performs unsigned integer division using repeated subtraction.
+;Dividend is in R1, divisor in R0.
+;Returns quotient in R0 and remainder in R1.
+;If divisor is zero, inputs are unchanged and C flag is set.
+;****************************************************************
+;Name:  Arnav Gawas
+;Date:  <Date completed here>
+;Class:  CMPE-250
+;Section:  <Your lab section, day, and time here>
+;---------------------------------------------------------------
+;Keil Simulator Template for KL05
+;R. W. Melton
+;August 21, 2025
+;****************************************************************
+;Assembler directives
+            THUMB
+            OPT     64
+;****************************************************************
+;EQUates
+BYTE_MASK         EQU  0xFF
+NIBBLE_MASK       EQU  0x0F
+BYTE_BITS         EQU  8
+NIBBLE_BITS       EQU  4
+WORD_SIZE         EQU  4
+HALFWORD_SIZE     EQU  2
+HALFWORD_MASK     EQU  0xFFFF
+RET_ADDR_T_MASK   EQU  1
+;---------------------------------------------------------------
+VECTOR_TABLE_SIZE EQU  0x000000C0
+VECTOR_SIZE       EQU  4
+;---------------------------------------------------------------
+;APSR flags
+APSR_MASK     EQU  0xF0000000
+APSR_N_MASK   EQU  0x80000000
+APSR_Z_MASK   EQU  0x40000000
+APSR_C_MASK   EQU  0x20000000
+APSR_V_MASK   EQU  0x10000000
+;---------------------------------------------------------------
+;Stack
+SSTACK_SIZE EQU  0x00000100
+;****************************************************************
+;Program
+            AREA    MyCode,CODE,READONLY
+            ENTRY
+            EXPORT  Reset_Handler
+
+Reset_Handler PROC {}
+main
+;---------------------------------------------------------------
+            BL      RegInit
+
+; ----- Example test values (optional) -----
+;            MOVS    R1,#25        ; dividend
+;            MOVS    R0,#4         ; divisor
+;            BL      DIVU          ; expect R0=6, R1=1
+;-------------------------------------------
+
+            B       .
+            ENDP
+;---------------------------------------------------------------
+RegInit     PROC  {}
+;****************************************************************
+;Initializes registers and APSR flags
+;****************************************************************
+            PUSH    {LR}
+
+            LDR     R1,=0x11111111
+            ADDS    R2,R1,R1
+            ADDS    R3,R2,R1
+            ADDS    R4,R3,R1
+            ADDS    R5,R4,R1
+            ADDS    R6,R5,R1
+            ADDS    R7,R6,R1
+            MOV     R8,R1
+            ADD     R8,R8,R7
+            MOV     R9,R1
+            ADD     R9,R9,R8
+            MOV     R10,R1
+            ADD     R10,R10,R9
+            MOV     R11,R1
+            ADD     R11,R11,R10
+            MOV     R12,R1
+            ADD     R12,R12,R11
+            MOV     R14,R2
+            ADD     R14,R14,R12
+            MOV     R0,R1
+            ADD     R0,R0,R14
+            MSR     APSR,R0
+
+            LDR     R0,=0x05250821
+            POP     {PC}
+            ENDP
+;---------------------------------------------------------------
+;>>>>> begin subroutine code <<<<<
+;---------------------------------------------------------------
+DIVU        PROC    {}
+            PUSH    {R2,R3,LR}        ; preserve registers
+
+            CMP     R0,#0             ; divisor = 0?
+            BEQ     DivByZero
+
+            MOVS    R2,#0             ; quotient = 0
+            MOV     R3,R1             ; working remainder
+
+DivLoop
+            CMP     R3,R0
+            BLO     DivDone           ; unsigned compare
+
+            SUBS    R3,R3,R0
+            ADDS    R2,R2,#1
+            B       DivLoop
+
+DivDone
+            MOV     R0,R2             ; quotient
+            MOV     R1,R3             ; remainder
+
+            MRS     R2,APSR           ; clear C flag
+            BIC     R2,R2,#APSR_C_MASK
+            MSR     APSR,R2
+
+            POP     {R2,R3,PC}
+
+DivByZero
+            MRS     R2,APSR           ; set C flag
+            ORR     R2,R2,#APSR_C_MASK
+            MSR     APSR,R2
+
+            POP     {R2,R3,PC}
+            ENDP
+;---------------------------------------------------------------
+;>>>>>   end subroutine code <<<<<
+            ALIGN
+;****************************************************************
+;Vector table
+            AREA    RESET, DATA, READONLY
+            EXPORT  __Vectors
+            EXPORT  __Vectors_End
+            EXPORT  __Vectors_Size
+__Vectors
+            DCD     __initial_sp
+            DCD     Reset_Handler
+            SPACE   (VECTOR_TABLE_SIZE - (2 * VECTOR_SIZE))
+__Vectors_End
+__Vectors_Size  EQU __Vectors_End - __Vectors
+            ALIGN
+;****************************************************************
+;Constants
+            AREA    MyConst,DATA,READONLY
+;****************************************************************
+            AREA    |.ARM.__at_0x1FFFFC00|,DATA,READWRITE,ALIGN=3
+            EXPORT  __initial_sp
+Stack_Mem   SPACE   SSTACK_SIZE
+__initial_sp
+;****************************************************************
+;Variables
+            AREA    MyData,DATA,READWRITE
+            END
